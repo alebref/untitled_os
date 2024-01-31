@@ -3,7 +3,7 @@ use uefi::prelude::BootServices;
 use uefi::proto::console::gop;
 use uefi::proto::console::gop::{GraphicsOutput, Mode};
 use uefi::table::boot::ScopedProtocol;
-use crate::kernel::native_graphics::FrameBuffer;
+use crate::kernel::native_graphics::{FrameBuffer, Resolution};
 
 pub(super) fn get_frame_buffer(boot_services: &BootServices) -> Option<FrameBuffer> {
     let graphics_output_handle = boot_services.get_handle_for_protocol::<GraphicsOutput>().ok()?;
@@ -21,16 +21,19 @@ fn select_highest_supported_mode(graphics_output_protocol: &mut ScopedProtocol<'
         .max_by(compare_horizontal_resolutions)
 }
 
-fn is_supports_32bit_pixels_direct_drawing(mode: &Mode) -> bool {
+fn supports_32bit_pixels_direct_drawing(mode: &Mode) -> bool {
     matches!(mode.info().pixel_format(), gop::PixelFormat::Bgr | gop::PixelFormat::Rgb)
 }
 
 fn has_supported_resolution(mode: &Mode) -> bool {
-    mode.info().resolution().0 <= 1920 && mode.info().resolution().0 <= 1080
+    Resolution::is_supported(Resolution {
+        horizontal: mode.info().resolution().0,
+        vertical: mode.info().resolution().1,
+    })
 }
 
 fn is_supported(mode: &Mode) -> bool {
-    is_supports_32bit_pixels_direct_drawing(mode) && has_supported_resolution(mode)
+    supports_32bit_pixels_direct_drawing(mode) && has_supported_resolution(mode)
 }
 
 fn get_horizontal_resolution(mode: &Mode) -> usize {

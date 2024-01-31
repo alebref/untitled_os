@@ -60,14 +60,46 @@ impl Pixel {
 }
 
 #[derive(Clone, Copy, Debug)]
+pub(crate) struct Position {
+    pub(crate) horizontal: usize,
+    pub(crate) vertical: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Resolution {
+    pub(crate) horizontal: usize,
+    pub(crate) vertical: usize,
+}
+
+impl Resolution {
+    const MIN_SUPPORTED: Self = Self {
+        horizontal: 320,
+        vertical: 200,
+    };
+    const MAX_SUPPORTED: Self = Self {
+        horizontal: 1920,
+        vertical: 1080,
+    };
+    pub(crate) const fn is_supported(other: Self) -> bool {
+        other.horizontal >= Self::MIN_SUPPORTED.horizontal
+            && other.horizontal <= Self::MAX_SUPPORTED.horizontal
+            && other.vertical >= Self::MIN_SUPPORTED.vertical
+            && other.vertical <= Self::MAX_SUPPORTED.vertical
+    }
+    pub(crate) const fn accepts_position(&self, position: Position) -> bool {
+        position.horizontal < self.horizontal
+            && position.horizontal < self.horizontal
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct FrameBuffer {
     mut_ptr_to_pixels: *mut HardwarePixel,
     pixel_format: HardwarePixelFormat,
     hardware_size_in_bytes: usize,
     /// may be larger than horizontal_resolution, for performance reasons, or due to hardware restrictions !
     hardware_width_in_pixels: usize,
-    horizontal_resolution: usize,
-    vertical_resolution: usize,
+    pub(crate) resolution: Resolution,
 }
 
 impl FrameBuffer {
@@ -78,28 +110,27 @@ impl FrameBuffer {
             pixel_format: HardwarePixelFormat::from_uefi_pixel_format(mode_info.pixel_format()),
             hardware_size_in_bytes: frame_buffer.size(),
             hardware_width_in_pixels: mode_info.stride(),
-            horizontal_resolution: mode_info.resolution().0,
-            vertical_resolution: mode_info.resolution().1,
+            resolution: Resolution {
+                horizontal: mode_info.resolution().0,
+                vertical: mode_info.resolution().1,
+            },
         }
     }
-    pub(crate) fn get_horizontal_resolution(&self) -> usize {
-        self.horizontal_resolution
-    }
-    pub(crate) fn get_vertical_resolution(&self) -> usize {
-        self.vertical_resolution
-    }
-    pub(crate) fn draw_pixel_if_visible(&mut self, x: usize, y: usize, pixel: Pixel) {
-        let hardware_pixel = HardwarePixel::new(pixel, self.pixel_format);
-        if x >= self.horizontal_resolution || y >= self.vertical_resolution {
+    pub(crate) fn draw_pixel_if_visible(&mut self, position: Position, pixel: Pixel) {
+        if !self.resolution.accepts_position(position) {
             return;
         }
         // Safe :
         // - This code is available after we got the hardware frame buffer without panicking, whose geometries are known
         // - Once the boot stage is over, we may keep writing into the frame buffer : our OS won't support other cases
         // - We just have validated x and y
+        unsafe { self.draw_pixel_unchecked(position, pixel); }
+    }
+    unsafe fn draw_pixel_unchecked(&mut self, position: Position, pixel: Pixel) {
+        let hardware_pixel = HardwarePixel::new(pixel, self.pixel_format);
         unsafe {
             self.mut_ptr_to_pixels
-                .offset((y * self.hardware_width_in_pixels + x) as isize)
+                .offset((position.vertical * self.hardware_width_in_pixels + position.horizontal) as isize)
                 .write_volatile(hardware_pixel);
         }
     }
@@ -107,9 +138,14 @@ impl FrameBuffer {
         self.fill(Pixel::BLACK);
     }
     pub(crate) fn fill(&mut self, pixel: Pixel) {
-        for x in 0..self.horizontal_resolution {
-            for y in 0..self.vertical_resolution {
-                self.draw_pixel_if_visible(x, y, pixel);
+        for horizontal in 0..self.resolution.horizontal {
+            for vertical in 0..self.resolution.vertical {
+                let position = Position {
+                    horizontal,
+                    vertical,
+                };
+                // Safe : position comes from self.resolution
+                unsafe { self.draw_pixel_unchecked(position, pixel); }
             }
         }
     }
