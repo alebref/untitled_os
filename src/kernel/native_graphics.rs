@@ -63,8 +63,8 @@ impl Pixel {
 pub(crate) struct FrameBuffer {
     mut_ptr_to_pixels: *mut HardwarePixel,
     pixel_format: HardwarePixelFormat,
-    /// may be larger than horizontal_resolution, for performance reasons, or due to hardware restrictions !
     hardware_size_in_bytes: usize,
+    /// may be larger than horizontal_resolution, for performance reasons, or due to hardware restrictions !
     hardware_width_in_pixels: usize,
     horizontal_resolution: usize,
     vertical_resolution: usize,
@@ -90,9 +90,13 @@ impl FrameBuffer {
     }
     pub(crate) fn draw_pixel_if_visible(&mut self, x: usize, y: usize, pixel: Pixel) {
         let hardware_pixel = HardwarePixel::new(pixel, self.pixel_format);
+        if x >= self.horizontal_resolution || y >= self.vertical_resolution {
+            return;
+        }
         // Safe :
         // - This code is available after we got the hardware frame buffer without panicking, whose geometries are known
         // - Once the boot stage is over, we may keep writing into the frame buffer : our OS won't support other cases
+        // - We just have validated x and y
         unsafe {
             self.mut_ptr_to_pixels
                 .offset((y * self.hardware_width_in_pixels + x) as isize)
