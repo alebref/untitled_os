@@ -1,0 +1,12 @@
+[package]
+name = "untitled_os"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+panic = "abort"
+strip = true
+
+[dependencies]
+uefi = "0.26.0"
+uefi-services = "0.23.0"
