@@ -26,8 +26,8 @@ struct HardwarePixel(u32);
 impl HardwarePixel {
     const fn new(Pixel { red, green, blue }: Pixel, pixel_format: HardwarePixelFormat) -> Self {
         match pixel_format {
-            HardwarePixelFormat::Bgr => Self( u32::from_le_bytes([blue, green, red, 0])),
-            _ => Self( u32::from_le_bytes([red, green, blue, 0]))
+            HardwarePixelFormat::Bgr => Self(u32::from_le_bytes([blue, green, red, 0])),
+            _ => Self(u32::from_le_bytes([red, green, blue, 0])),
         }
     }
 }
@@ -51,11 +51,7 @@ impl Pixel {
         blue: 0,
     };
     pub(crate) const fn rgb(red: u8, green: u8, blue: u8) -> Self {
-        Self {
-            red,
-            green,
-            blue,
-        }
+        Self { red, green, blue }
     }
 }
 
@@ -87,8 +83,7 @@ impl Resolution {
             && other.vertical <= Self::MAX_SUPPORTED.vertical
     }
     pub(crate) const fn accepts_position(&self, position: Position) -> bool {
-        position.horizontal < self.horizontal
-            && position.horizontal < self.horizontal
+        position.horizontal < self.horizontal && position.horizontal < self.horizontal
     }
 }
 
@@ -103,7 +98,10 @@ pub(crate) struct FrameBuffer {
 }
 
 impl FrameBuffer {
-    pub(crate) fn from_uefi_graphics_output_protocol(mut frame_buffer: gop::FrameBuffer, mode_info: ModeInfo) -> Self {
+    pub(crate) fn from_uefi_graphics_output_protocol(
+        mut frame_buffer: gop::FrameBuffer,
+        mode_info: ModeInfo,
+    ) -> Self {
         Self {
             // Safe : UEFI frame buffers must be 32*n-byte-sized for our supported pixel formats
             mut_ptr_to_pixels: unsafe { mem::transmute(frame_buffer.as_mut_ptr()) },
@@ -124,13 +122,18 @@ impl FrameBuffer {
         // - This code is available after we got the hardware frame buffer without panicking, whose geometries are known
         // - Once the boot stage is over, we may keep writing into the frame buffer : our OS won't support other cases
         // - We just have validated x and y
-        unsafe { self.draw_pixel_unchecked(position, pixel); }
+        unsafe {
+            self.draw_pixel_unchecked(position, pixel);
+        }
     }
     unsafe fn draw_pixel_unchecked(&mut self, position: Position, pixel: Pixel) {
         let hardware_pixel = HardwarePixel::new(pixel, self.pixel_format);
         unsafe {
             self.mut_ptr_to_pixels
-                .offset((position.vertical * self.hardware_width_in_pixels + position.horizontal) as isize)
+                .offset(
+                    (position.vertical * self.hardware_width_in_pixels + position.horizontal)
+                        as isize,
+                )
                 .write_volatile(hardware_pixel);
         }
     }
@@ -145,7 +148,9 @@ impl FrameBuffer {
                     vertical,
                 };
                 // Safe : position comes from self.resolution
-                unsafe { self.draw_pixel_unchecked(position, pixel); }
+                unsafe {
+                    self.draw_pixel_unchecked(position, pixel);
+                }
             }
         }
     }

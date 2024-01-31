@@ -1,15 +1,15 @@
 #![no_main]
 #![no_std]
 
-mod uefi_boot;
 mod kernel;
+mod uefi_boot;
 
-use core::panic::PanicInfo;
-use uefi::{entry, Handle, Status};
-use uefi::table::{Boot, SystemTable};
 use crate::kernel::load;
 use crate::kernel::native_graphics::{FrameBuffer, Pixel};
 use crate::uefi_boot::{boot, BootResult};
+use core::panic::PanicInfo;
+use uefi::table::{Boot, SystemTable};
+use uefi::{entry, Handle, Status};
 
 /// Made accessible to our `panic_handler` as a mutable static item, sorry...
 static mut FRAME_BUFFER: Option<FrameBuffer> = None;
@@ -20,7 +20,10 @@ unsafe fn main(_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     if boot_result.is_none() {
         return Status::UNSUPPORTED;
     }
-    let BootResult { mut kernel_context, frame_buffer } = boot_result.unwrap();
+    let BootResult {
+        mut kernel_context,
+        frame_buffer,
+    } = boot_result.unwrap();
     FRAME_BUFFER = Some(frame_buffer);
     load(&mut kernel_context);
 }

@@ -1,6 +1,6 @@
-use uefi::table::{Runtime, SystemTable};
-use uefi::table::boot::MemoryMap;
 use crate::kernel::native_graphics::FrameBuffer;
+use uefi::table::boot::MemoryMap;
+use uefi::table::{Runtime, SystemTable};
 
 pub(crate) mod native_graphics;
 
