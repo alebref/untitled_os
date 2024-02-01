@@ -5,6 +5,7 @@ edition = "2021"
 
 [profile.release]
 panic = "abort"
+opt-level = 3
 strip = true
 
 [dependencies]

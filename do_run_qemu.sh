@@ -18,6 +18,11 @@ if [ ! -f "target/x86_64-unknown-uefi/release/untitled_os.efi" ]; then
   exit
 fi
 
+mkdir qemu
+mkdir qemu/esp
+mkdir qemu/esp/efi
+mkdir qemu/esp/efi/boot
+
 print_title "copying OVMF files" &&
 cp /usr/share/OVMF/OVMF_CODE.fd qemu &&
 cp /usr/share/OVMF/OVMF_VARS.fd qemu &&
@@ -32,6 +37,14 @@ qemu-system-x86_64 -enable-kvm \
 -drive format=raw,file=fat:rw:qemu/esp &&
 
 print_success &&
+rm qemu/esp/efi/boot/bootx64.efi &&
+rmdir qemu/esp/efi/boot &&
+rmdir qemu/esp/efi &&
+rm qemu/esp/NvVars &&
+rmdir qemu/esp &&
+rm qemu/OVMF_CODE.fd &&
+rm qemu/OVMF_VARS.fd &&
+rmdir qemu &&
 exit 0
 
 print_failure "something went wrong"

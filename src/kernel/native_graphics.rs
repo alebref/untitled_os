@@ -128,14 +128,11 @@ impl FrameBuffer {
     }
     unsafe fn draw_pixel_unchecked(&mut self, position: Position, pixel: Pixel) {
         let hardware_pixel = HardwarePixel::new(pixel, self.pixel_format);
-        unsafe {
-            self.mut_ptr_to_pixels
-                .offset(
-                    (position.vertical * self.hardware_width_in_pixels + position.horizontal)
-                        as isize,
-                )
-                .write_volatile(hardware_pixel);
-        }
+        self.mut_ptr_to_pixels
+            .offset(
+                (position.vertical * self.hardware_width_in_pixels + position.horizontal) as isize,
+            )
+            .write_volatile(hardware_pixel);
     }
     pub(crate) fn blacken(&mut self) {
         self.fill(Pixel::BLACK);
