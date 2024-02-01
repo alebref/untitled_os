@@ -76,11 +76,11 @@ impl Resolution {
         horizontal: 1920,
         vertical: 1080,
     };
-    pub(crate) const fn is_supported(other: Self) -> bool {
-        other.horizontal >= Self::MIN_SUPPORTED.horizontal
-            && other.horizontal <= Self::MAX_SUPPORTED.horizontal
-            && other.vertical >= Self::MIN_SUPPORTED.vertical
-            && other.vertical <= Self::MAX_SUPPORTED.vertical
+    pub(crate) const fn is_supported(&self) -> bool {
+        self.horizontal >= Self::MIN_SUPPORTED.horizontal
+            && self.horizontal <= Self::MAX_SUPPORTED.horizontal
+            && self.vertical >= Self::MIN_SUPPORTED.vertical
+            && self.vertical <= Self::MAX_SUPPORTED.vertical
     }
     pub(crate) const fn accepts_position(&self, position: Position) -> bool {
         position.horizontal < self.horizontal && position.horizontal < self.horizontal

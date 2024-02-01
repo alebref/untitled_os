@@ -40,10 +40,11 @@ fn supports_32bit_pixels_direct_drawing(mode: &Mode) -> bool {
 }
 
 fn has_supported_resolution(mode: &Mode) -> bool {
-    Resolution::is_supported(Resolution {
+    Resolution {
         horizontal: mode.info().resolution().0,
         vertical: mode.info().resolution().1,
-    })
+    }
+    .is_supported()
 }
 
 fn is_supported(mode: &Mode) -> bool {
