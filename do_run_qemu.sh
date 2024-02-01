@@ -12,8 +12,10 @@ print_failure()
   printf "\e[31;107m%s\e[39;49m\n" "$1"
 }
 
-if [ ! -f "target/x86_64-unknown-uefi/release/untitled_os.efi" ]; then
-  print_failure "missing file: target/x86_64-unknown-uefi/release/untitled_os.efi"
+RELEASE_EFI_FILE=target/x86_64-unknown-uefi/release/untitled_os.efi
+
+if [ ! -f $RELEASE_EFI_FILE ]; then
+  print_failure "missing file: ${RELEASE_EFI_FILE}"
   print_failure "Please build release"
   exit
 fi
@@ -28,7 +30,7 @@ cp /usr/share/OVMF/OVMF_CODE.fd qemu &&
 cp /usr/share/OVMF/OVMF_VARS.fd qemu &&
 
 print_title "copying EFI file" &&
-cp target/x86_64-unknown-uefi/release/untitled_os.efi qemu/esp/efi/boot/bootx64.efi &&
+cp $RELEASE_EFI_FILE qemu/esp/efi/boot/bootx64.efi &&
 
 print_title "launching QEMU" &&
 qemu-system-x86_64 -enable-kvm \
@@ -37,13 +39,13 @@ qemu-system-x86_64 -enable-kvm \
 -drive format=raw,file=fat:rw:qemu/esp &&
 
 print_success &&
-rm qemu/esp/efi/boot/bootx64.efi &&
+rm -f qemu/esp/efi/boot/bootx64.efi &&
 rmdir qemu/esp/efi/boot &&
 rmdir qemu/esp/efi &&
-rm qemu/esp/NvVars &&
+rm -f qemu/esp/NvVars &&
 rmdir qemu/esp &&
-rm qemu/OVMF_CODE.fd &&
-rm qemu/OVMF_VARS.fd &&
+rm -f qemu/OVMF_CODE.fd &&
+rm -f qemu/OVMF_VARS.fd &&
 rmdir qemu &&
 exit 0
 

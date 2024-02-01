@@ -13,7 +13,7 @@ print_failure()
 }
 
 print_title "building release" &&
-cargo build --release --target=x86_64-unknown-uefi &&
+cargo build --release &&
 
 print_success &&
 exit 0

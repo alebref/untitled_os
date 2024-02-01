@@ -16,18 +16,17 @@ if [ $# -eq 0 ]; then
   print_failure "Please provide one argument to select the target device, ex: /dev/sdb"
   exit 1
 fi
-DEVICE=$1
 
-if [ ! -f "target/x86_64-unknown-uefi/release/untitled_os.efi" ]; then
-  print_failure "missing file: target/x86_64-unknown-uefi/release/untitled_os.efi"
+DEVICE=$1
+RELEASE_EFI_FILE=target/x86_64-unknown-uefi/release/untitled_os.efi
+
+if [ ! -f $RELEASE_EFI_FILE ]; then
+  print_failure "missing file: ${RELEASE_EFI_FILE}"
   print_failure "Please build release"
-  exit 1
+  exit
 fi
 
 mkdir bootable
-mkdir bootable/esp
-mkdir bootable/esp/efi
-mkdir bootable/esp/efi/boot
 
 print_title "trying to unmount device"
 umount "${DEVICE}"
@@ -46,19 +45,17 @@ print_title "showing result" &&
 lsblk -T -o NAME,SIZE,TYPE,FSSIZE,FSTYPE,LABEL,PARTN,PARTTYPE,PARTLABEL,PARTFLAGS "${DEVICE}" &&
 
 print_title "mounting EFI partition" &&
-mount "${DEVICE}1" bootable/esp &&
+mount "${DEVICE}1" bootable &&
 
 print_title "copying EFI file" &&
-cp target/x86_64-unknown-uefi/release/untitled_os.efi bootable/esp/efi/boot/bootx64.efi &&
+mkdir bootable/efi
+mkdir bootable/efi/boot
+cp $RELEASE_EFI_FILE bootable/efi/boot/bootx64.efi &&
 
 print_title "unmounting EFI partition" &&
-umount bootable/esp &&
+umount bootable &&
 
 print_success &&
-rm bootable/esp/efi/boot/bootx64.efi &&
-rmdir bootable/esp/efi/boot &&
-rmdir bootable/esp/efi &&
-rmdir bootable/esp &&
 rmdir bootable &&
 exit 0
 
