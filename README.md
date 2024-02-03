@@ -15,5 +15,5 @@
 
 ## What Untitled OS does for now on start
 * It prints a welcome message
-* It prints a test panic meesage
+* It prints a test panic message
 * Nothing !
