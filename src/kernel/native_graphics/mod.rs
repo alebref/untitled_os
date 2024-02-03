@@ -50,6 +50,11 @@ impl Pixel {
         green: 0,
         blue: 0,
     };
+    pub(crate) const WHITE: Self = Self {
+        red: 255,
+        green: 255,
+        blue: 255,
+    };
     pub(crate) const fn rgb(red: u8, green: u8, blue: u8) -> Self {
         Self { red, green, blue }
     }

@@ -1,4 +1,3 @@
-use crate::kernel::native_graphics::FrameBuffer;
 use crate::kernel::KernelContext;
 use crate::uefi_boot::uefi_graphics::get_frame_buffer;
 use uefi::table::boot::MemoryType;
@@ -6,12 +5,7 @@ use uefi::table::{Boot, SystemTable};
 
 mod uefi_graphics;
 
-pub(super) struct BootResult {
-    pub(super) frame_buffer: FrameBuffer,
-    pub(super) kernel_context: KernelContext,
-}
-
-pub(super) fn boot(system_table: SystemTable<Boot>) -> Option<BootResult> {
+pub(super) fn boot(system_table: SystemTable<Boot>) -> Option<KernelContext> {
     let boot_services = system_table.boot_services();
     let frame_buffer = get_frame_buffer(boot_services)?;
     let (system_table, memory_map) =
@@ -21,8 +15,5 @@ pub(super) fn boot(system_table: SystemTable<Boot>) -> Option<BootResult> {
         system_table,
         memory_map,
     };
-    Some(BootResult {
-        frame_buffer,
-        kernel_context,
-    })
+    Some(kernel_context)
 }

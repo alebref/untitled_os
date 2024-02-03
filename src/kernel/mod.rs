@@ -1,7 +1,9 @@
+use crate::kernel::console::Console;
 use crate::kernel::native_graphics::FrameBuffer;
 use uefi::table::boot::MemoryMap;
 use uefi::table::{Runtime, SystemTable};
 
+pub(crate) mod console;
 pub(crate) mod native_graphics;
 
 #[derive(Debug)]
@@ -11,7 +13,8 @@ pub(crate) struct KernelContext {
     pub(crate) memory_map: MemoryMap<'static>,
 }
 
-pub(super) fn load(context: &mut KernelContext) -> ! {
+pub(super) fn load(context: &mut KernelContext, console: &mut Console) -> ! {
     context.frame_buffer.blacken();
+    console.println("Hello world !\nWelcome to Untitled OS :)");
     panic!("lol");
 }
