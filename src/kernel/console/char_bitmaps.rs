@@ -52,12 +52,9 @@ impl CharBitMap {
     }
 }
 
-impl From<char> for CharBitMap {
-    fn from(c: char) -> Self {
-        let mut buffer = [0u8; 4];
-        let as_utf8 = c.encode_utf8(&mut buffer);
-        let as_byte = if as_utf8.len() == 1 { buffer[0] } else { b' ' };
-        let start_index = as_byte as usize * CHAR_HEIGHT;
+impl From<u8> for CharBitMap {
+    fn from(byte: u8) -> Self {
+        let start_index = byte as usize * CHAR_HEIGHT;
         CharBitMap([
             CharBitLine(CHAR_BITMAPS[start_index]),
             CharBitLine(CHAR_BITMAPS[start_index + 1]),

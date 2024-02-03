@@ -30,7 +30,7 @@ fn main(_handle: Handle, system_table: SystemTable<Boot>) -> Status {
 
 #[panic_handler]
 unsafe fn panic(info: &PanicInfo) -> ! {
-    if let Some(mut console) = PANIC_CONSOLE {
+    if let Some(console) = PANIC_CONSOLE {
         if let Some(&message) = info.payload().downcast_ref::<&str>() {
             (*console).eprintln(message);
         } else {

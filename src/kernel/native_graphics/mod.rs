@@ -96,7 +96,6 @@ impl Resolution {
 pub(crate) struct FrameBuffer {
     mut_ptr_to_pixels: *mut HardwarePixel,
     pixel_format: HardwarePixelFormat,
-    hardware_size_in_bytes: usize,
     /// may be larger than horizontal_resolution, for performance reasons, or due to hardware restrictions !
     hardware_width_in_pixels: usize,
     pub(crate) resolution: Resolution,
@@ -111,7 +110,6 @@ impl FrameBuffer {
             // Safe : UEFI frame buffers must be 32*n-byte-sized for our supported pixel formats
             mut_ptr_to_pixels: unsafe { mem::transmute(frame_buffer.as_mut_ptr()) },
             pixel_format: HardwarePixelFormat::from_uefi_pixel_format(mode_info.pixel_format()),
-            hardware_size_in_bytes: frame_buffer.size(),
             hardware_width_in_pixels: mode_info.stride(),
             resolution: Resolution {
                 horizontal: mode_info.resolution().0,

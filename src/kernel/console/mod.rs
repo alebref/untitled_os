@@ -43,7 +43,7 @@ impl Console {
             char_color: CharColor::default(),
         }
     }
-    pub(crate) fn print(&mut self, s: &str) {
+    pub(crate) fn print_str(&mut self, s: &str) {
         for c in s.chars() {
             match c {
                 '\n' => self.new_line(),
@@ -52,7 +52,7 @@ impl Console {
         }
     }
     pub(crate) fn println(&mut self, s: &str) {
-        self.print(s);
+        self.print_str(s);
         self.new_line();
     }
     pub(crate) fn eprintln(&mut self, s: &str) {
@@ -66,8 +66,16 @@ impl Console {
         self.cursor_position.vertical += CHAR_RESOLUTION.vertical;
     }
     fn print_char(&mut self, c: char) {
+        const MAX_UTF8_BYTE_COUNT: usize = 4;
+        let mut buffer = [0u8; MAX_UTF8_BYTE_COUNT];
+        let utf8_str = c.encode_utf8(&mut buffer);
+        for byte in utf8_str.bytes() {
+            self.print_byte(byte);
+        }
+    }
+    fn print_byte(&mut self, byte: u8) {
         let mut pixel_position = self.cursor_position;
-        for bit_line in CharBitMap::from(c).get_lines() {
+        for bit_line in CharBitMap::from(byte).get_lines() {
             for bit in bit_line.get_bits() {
                 let pixel = self.apply_colors(bit);
                 self.frame_buffer
