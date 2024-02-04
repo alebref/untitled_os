@@ -21,6 +21,7 @@ impl HardwarePixelFormat {
 }
 
 #[derive(Clone, Copy, Debug)]
+#[allow(dead_code)]
 struct HardwarePixel(u32);
 
 impl HardwarePixel {
@@ -29,6 +30,13 @@ impl HardwarePixel {
             HardwarePixelFormat::Bgr => Self(u32::from_le_bytes([blue, green, red, 0])),
             _ => Self(u32::from_le_bytes([red, green, blue, 0])),
         }
+    }
+}
+
+impl Into<Pixel> for HardwarePixel {
+    fn into(self) -> Pixel {
+        let bytes = self.0.to_le_bytes();
+        Pixel::rgb(bytes[0], bytes[1], bytes[2])
     }
 }
 
@@ -45,11 +53,6 @@ impl Pixel {
         green: 0,
         blue: 0,
     };
-    pub(crate) const RED: Self = Self {
-        red: 255,
-        green: 0,
-        blue: 0,
-    };
     pub(crate) const WHITE: Self = Self {
         red: 255,
         green: 255,
@@ -61,7 +64,7 @@ impl Pixel {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct Position {
+pub(crate) struct PixelPosition {
     pub(crate) horizontal: usize,
     pub(crate) vertical: usize,
 }
@@ -77,7 +80,7 @@ impl Resolution {
         horizontal: 320,
         vertical: 200,
     };
-    const MAX_SUPPORTED: Self = Self {
+    pub(crate) const MAX_SUPPORTED: Self = Self {
         horizontal: 1920,
         vertical: 1080,
     };
@@ -87,7 +90,7 @@ impl Resolution {
             && self.vertical >= Self::MIN_SUPPORTED.vertical
             && self.vertical <= Self::MAX_SUPPORTED.vertical
     }
-    pub(crate) const fn accepts_position(&self, position: Position) -> bool {
+    pub(crate) const fn accepts_position(&self, position: PixelPosition) -> bool {
         position.horizontal < self.horizontal && position.horizontal < self.horizontal
     }
 }
@@ -117,19 +120,39 @@ impl FrameBuffer {
             },
         }
     }
-    pub(crate) fn draw_pixel_if_visible(&mut self, position: Position, pixel: Pixel) {
+    pub(crate) fn get_pixel_if_visible(&self, position: PixelPosition) -> Option<Pixel> {
+        if !self.resolution.accepts_position(position) {
+            return None;
+        }
+        // Safe :
+        // - This code is available after we got the hardware frame buffer without panicking, whose geometries are known
+        // - Once the boot stage is over, we may keep reading from the frame buffer : our OS won't support other cases
+        // - We just have validated the position
+        unsafe {
+            let hardware_pixel = self
+                .mut_ptr_to_pixels
+                .offset(
+                    (position.vertical * self.hardware_width_in_pixels + position.horizontal)
+                        as isize,
+                )
+                .read_volatile();
+            Some(hardware_pixel.into())
+        }
+    }
+
+    pub(crate) fn draw_pixel_if_visible(&mut self, position: PixelPosition, pixel: Pixel) {
         if !self.resolution.accepts_position(position) {
             return;
         }
         // Safe :
         // - This code is available after we got the hardware frame buffer without panicking, whose geometries are known
         // - Once the boot stage is over, we may keep writing into the frame buffer : our OS won't support other cases
-        // - We just have validated x and y
+        // - We just have validated the position
         unsafe {
             self.draw_pixel_unchecked(position, pixel);
         }
     }
-    unsafe fn draw_pixel_unchecked(&mut self, position: Position, pixel: Pixel) {
+    unsafe fn draw_pixel_unchecked(&mut self, position: PixelPosition, pixel: Pixel) {
         let hardware_pixel = HardwarePixel::new(pixel, self.pixel_format);
         self.mut_ptr_to_pixels
             .offset(
@@ -137,13 +160,27 @@ impl FrameBuffer {
             )
             .write_volatile(hardware_pixel);
     }
+    pub(crate) fn copy_one_pixel(&self, dest: PixelPosition, src: PixelPosition) {
+        let src_offset = (src.vertical * self.hardware_width_in_pixels + src.horizontal) as isize;
+        let dest_offset =
+            (dest.vertical * self.hardware_width_in_pixels + dest.horizontal) as isize;
+        // Safe :
+        // - This code is available after we got the hardware frame buffer without panicking, whose geometries are known
+        // - Once the boot stage is over, we may keep writing into the frame buffer : our OS won't support other cases
+        // - We just have validated the positions
+        unsafe {
+            self.mut_ptr_to_pixels
+                .offset(src_offset)
+                .copy_to(self.mut_ptr_to_pixels.offset(dest_offset), 1);
+        }
+    }
     pub(crate) fn blacken(&mut self) {
         self.fill(Pixel::BLACK);
     }
     pub(crate) fn fill(&mut self, pixel: Pixel) {
         for horizontal in 0..self.resolution.horizontal {
             for vertical in 0..self.resolution.vertical {
-                let position = Position {
+                let position = PixelPosition {
                     horizontal,
                     vertical,
                 };

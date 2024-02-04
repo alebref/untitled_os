@@ -4,14 +4,13 @@
 mod kernel;
 mod uefi_boot;
 
-use crate::kernel::console::Console;
+use crate::kernel::console::{Console, DisposablePanicWriter};
 use crate::kernel::load;
 use crate::uefi_boot::boot;
 use core::panic::PanicInfo;
 use uefi::table::{Boot, SystemTable};
 use uefi::{entry, Handle, Status};
 
-/// Made accessible to our `panic_handler` as a mutable static item, sorry...
 static mut PANIC_CONSOLE: Option<*mut Console> = None;
 
 #[entry]
@@ -31,11 +30,7 @@ fn main(_handle: Handle, system_table: SystemTable<Boot>) -> Status {
 #[panic_handler]
 unsafe fn panic(info: &PanicInfo) -> ! {
     if let Some(console) = PANIC_CONSOLE {
-        if let Some(&message) = info.payload().downcast_ref::<&str>() {
-            (*console).eprintln(message);
-        } else {
-            (*console).eprintln("System panic !");
-        }
+        DisposablePanicWriter::new(*console).panic(info);
     }
     loop {}
 }

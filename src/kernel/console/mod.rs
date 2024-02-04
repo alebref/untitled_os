@@ -1,96 +1,93 @@
-use crate::kernel::console::char_bitmaps::{CharBit, CharBitMap, CHAR_RESOLUTION};
-use crate::kernel::native_graphics::{FrameBuffer, Pixel, Position};
+use crate::kernel::console::char_buffer::{CharBuffer, CharColors, PrintableChar};
+use crate::kernel::native_graphics::{FrameBuffer, Pixel};
+use core::fmt::Write;
+use core::panic::PanicInfo;
 
 pub mod char_bitmaps;
+mod char_buffer;
 
-#[derive(Clone, Copy, Debug)]
-struct CharColor {
-    foreground: Pixel,
-    background: Pixel,
-}
-
-impl CharColor {
-    const PANIC: Self = Self {
-        foreground: Pixel::RED,
-        background: Pixel::WHITE,
+impl CharColors {
+    const OUTPUT: Self = Self {
+        foreground: Pixel::rgb(223, 223, 223),
+        background: Pixel::rgb(32, 32, 32),
     };
-}
-
-impl Default for CharColor {
-    fn default() -> Self {
-        Self {
-            foreground: Pixel::WHITE,
-            background: Pixel::BLACK,
-        }
-    }
+    const PANIC: Self = Self {
+        foreground: Pixel::rgb(223, 223, 223),
+        background: Pixel::rgb(223, 0, 0),
+    };
 }
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Console {
-    frame_buffer: FrameBuffer,
-    cursor_position: Position,
-    char_color: CharColor,
+    char_buffer: CharBuffer,
 }
 
 impl Console {
     pub(crate) fn new(frame_buffer: FrameBuffer) -> Self {
-        Self {
-            frame_buffer,
-            cursor_position: Position {
-                horizontal: 0,
-                vertical: 0,
-            },
-            char_color: CharColor::default(),
-        }
+        let mut char_buffer = CharBuffer::new(frame_buffer);
+        char_buffer.set_char_colors(CharColors::OUTPUT);
+        Self { char_buffer }
     }
-    pub(crate) fn print_str(&mut self, s: &str) {
+
+    pub(crate) fn enter_panic_mode(&mut self) {
+        self.char_buffer.set_char_colors(CharColors::PANIC);
+    }
+
+    pub(crate) fn print(&mut self, s: &str) {
         for c in s.chars() {
             match c {
-                '\n' => self.new_line(),
+                '\n' => self.wrap_line(),
+                '\r' => self.go_to_line_start(),
+                '\t' => self.insert_tab(),
                 _ => self.print_char(c),
             };
         }
     }
-    pub(crate) fn println(&mut self, s: &str) {
-        self.print_str(s);
-        self.new_line();
+    fn wrap_line(&mut self) {
+        self.char_buffer.go_down();
+        self.char_buffer.go_to_line_start();
     }
-    pub(crate) fn eprintln(&mut self, s: &str) {
-        let current_color = self.char_color;
-        self.char_color = CharColor::PANIC;
-        self.println(s);
-        self.char_color = current_color;
+    fn go_to_line_start(&mut self) {
+        self.char_buffer.go_to_line_start();
     }
-    pub(crate) fn new_line(&mut self) {
-        self.cursor_position.horizontal = 0;
-        self.cursor_position.vertical += CHAR_RESOLUTION.vertical;
+    fn insert_tab(&mut self) {
+        const TAB_SIZE: usize = 4;
+        for _ in 0..TAB_SIZE {
+            self.char_buffer.put_char(PrintableChar::SPACE);
+        }
     }
     fn print_char(&mut self, c: char) {
         const MAX_UTF8_BYTE_COUNT: usize = 4;
         let mut buffer = [0u8; MAX_UTF8_BYTE_COUNT];
         let utf8_str = c.encode_utf8(&mut buffer);
         for byte in utf8_str.bytes() {
-            self.print_byte(byte);
-        }
-    }
-    fn print_byte(&mut self, byte: u8) {
-        let mut pixel_position = self.cursor_position;
-        for bit_line in CharBitMap::from(byte).get_lines() {
-            for bit in bit_line.get_bits() {
-                let pixel = self.apply_colors(bit);
-                self.frame_buffer
-                    .draw_pixel_if_visible(pixel_position, pixel);
-                pixel_position.horizontal += 1;
+            let printable_char = PrintableChar::try_from(byte);
+            if let Ok(printable_char) = printable_char {
+                self.char_buffer.put_char(printable_char);
             }
-            pixel_position.horizontal = self.cursor_position.horizontal;
-            pixel_position.vertical += 1;
         }
-        self.cursor_position.horizontal += CHAR_RESOLUTION.horizontal;
     }
-    fn apply_colors(&self, bit: CharBit) -> Pixel {
-        match bit {
-            CharBit::Foreground => self.char_color.foreground,
-            CharBit::Background => self.char_color.background,
-        }
+}
+
+struct PanicWriter(Console);
+
+impl Write for PanicWriter {
+    /// Never fails
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        let mut console = self.0;
+        console.enter_panic_mode();
+        console.print(s);
+        Ok(())
+    }
+}
+
+pub(crate) struct DisposablePanicWriter(PanicWriter);
+
+impl DisposablePanicWriter {
+    pub(crate) fn new(console: Console) -> Self {
+        Self(PanicWriter(console))
+    }
+    pub(crate) fn panic(mut self, panic_info: &PanicInfo) {
+        write!(self.0, "\n{:?}", panic_info).unwrap();
     }
 }

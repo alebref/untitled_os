@@ -9,5 +9,6 @@ opt-level = 3
 strip = true
 
 [dependencies]
+# spin = { version = "0.9.8", features = ["mutex"] }
 uefi = "0.26.0"
 uefi-services = "0.23.0"

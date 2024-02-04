@@ -12,12 +12,19 @@ print_failure()
   printf "\e[31;107m%s\e[39;49m\n" "$1"
 }
 
-RELEASE_EFI_FILE=target/x86_64-unknown-uefi/release/untitled_os.efi
+if [ "--release" = "$1" ]; then
+  BUILD_CMD="cargo build --release"
+  RELEASE_EFI_FILE=target/x86_64-unknown-uefi/release/untitled_os.efi
+else
+  print_title "no --release arg : assuming debug mode"
+  BUILD_CMD="cargo build"
+  RELEASE_EFI_FILE=target/x86_64-unknown-uefi/debug/untitled_os.efi
+fi
 
 if [ ! -f $RELEASE_EFI_FILE ]; then
   print_failure "missing file: ${RELEASE_EFI_FILE}"
-  print_failure "Please build release"
-  exit
+  print_failure "Please build first with '$BUILD_CMD'"
+  exit 1
 fi
 
 mkdir qemu
