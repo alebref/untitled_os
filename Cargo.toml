@@ -2,6 +2,8 @@
 name = "untitled_os"
 version = "0.1.0"
 edition = "2021"
+authors = ["alebref <contact@alebref.fr>"]
+repository = "https://github.com/alebref/untitled_os"
 
 [profile.release]
 panic = "abort"
