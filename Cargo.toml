@@ -2,6 +2,8 @@
 name = "untitled_os"
 version = "0.1.0"
 edition = "2021"
+description = "The unfamous, the useless, the untitled Rust-written OS : Untitled OS "
+license = "GPL-3.0"
 authors = ["alebref <contact@alebref.fr>"]
 repository = "https://github.com/alebref/untitled_os"
 
